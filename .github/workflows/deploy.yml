@@ -64,5 +64,5 @@ jobs:
             # stop old containers
             sudo docker stop sanss-property-login || true
             sudo docker rm sanss-property-login || true
-            sudo docker run -d --name sanss-property-login -p 3001:3001 \
+            sudo docker run -d --name sanss-property-login -p 3002:3002 \
               ${{ secrets.DOCKER_USERNAME }}/sanss-property-login:staging
