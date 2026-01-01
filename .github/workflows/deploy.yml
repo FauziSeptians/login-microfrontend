@@ -1,0 +1,68 @@
+name: Build and deploy Next.js Docker image
+
+on:
+  push:
+    branches:
+      - staging
+      - feat/config-deployment
+
+concurrency:
+  group: build-deploy-${{ github.ref }}
+  cancel-in-progress: false
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v3
+
+      - name: Generate .env
+        run: |
+          echo "NODE_ENV=production" >> .env
+          echo "NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY=${{ secrets.NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY }}" >> .env
+          echo "CLERK_SECRET_KEY=${{ secrets.CLERK_SECRET_KEY }}" >> .env
+          echo "NEXT_PUBLIC_CLERK_SIGN_IN_URL=${{ secrets.NEXT_PUBLIC_CLERK_SIGN_IN_URL }}" >> .env
+          echo "NEXT_PUBLIC_CLERK_AFTER_SIGN_IN_URL=${{ secrets.NEXT_PUBLIC_CLERK_AFTER_SIGN_IN_URL }}" >> .env
+          echo "NEXT_PUBLIC_ROUTE=${{ secrets.NEXT_PUBLIC_ROUTE }}" >> .env
+          echo "PORT=3001" >> .env
+
+      - name: Build Docker image
+        run: docker build --build-arg ENV_FILE=.env -t sanss-property-login .
+
+      - name: Login to Docker Hub
+        run: echo "${{ secrets.DOCKER_PASSWORD }}" | docker login -u "${{ secrets.DOCKER_USERNAME }}" --password-stdin
+
+      - name: Tag and push image to Docker Hub
+        run: |
+          docker tag sanss-property-login ${{ secrets.DOCKER_USERNAME }}/sanss-property-login:staging
+          docker push ${{ secrets.DOCKER_USERNAME }}/sanss-property-login:staging
+
+  deploy:
+    needs: build
+    runs-on: ubuntu-latest
+    steps:
+      - name: Pull image on server
+        uses: appleboy/ssh-action@v0.1.10
+        with:
+          host: ${{ secrets.SERVER_HOST }}
+          username: ${{ secrets.SERVER_USER }}
+          key: ${{ secrets.SERVER_SSH_KEY }}
+          timeout: 30m
+          script: |
+            sudo docker login -u "${{ secrets.DOCKER_USERNAME }}" -p "${{ secrets.DOCKER_PASSWORD }}"
+            sudo docker pull ${{ secrets.DOCKER_USERNAME }}/sanss-property-login:staging
+
+      - name: Run containers on server
+        uses: appleboy/ssh-action@v0.1.10
+        with:
+          host: ${{ secrets.SERVER_HOST }}
+          username: ${{ secrets.SERVER_USER }}
+          key: ${{ secrets.SERVER_SSH_KEY }}
+          timeout: 5m
+          script: |
+            # stop old containers
+            sudo docker stop sanss-property-login || true
+            sudo docker rm sanss-property-login || true
+            sudo docker run -d --name sanss-property-login -p 3001:3001 \
+              ${{ secrets.DOCKER_USERNAME }}/sanss-property-login:staging
