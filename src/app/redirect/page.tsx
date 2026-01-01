@@ -4,9 +4,11 @@ import { redirect } from 'next/navigation';
 export default async function RedirectPage() {
   const { userId } = await auth();
 
+  console.log(userId);
+
   if (!userId) {
     redirect('/sign-in');
   }
 
-  redirect(process.env.NEXT_PUBLIC_REDIRECT_HOME || '');
+  redirect(process.env.NEXT_PUBLIC_ROUTE || '');
 }
