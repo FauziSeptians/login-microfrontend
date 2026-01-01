@@ -1,5 +1,5 @@
-# Gunakan image Node.js resmi
-FROM node:18-alpine
+# Gunakan image Node.js terbaru (21.7)
+FROM node:21.7-alpine
 
 # Set direktori kerja di dalam container
 WORKDIR /app
@@ -16,11 +16,11 @@ COPY . .
 # Build aplikasi Next.js
 RUN npm run build
 
-# Set environment variable agar Next.js berjalan di port 3001
-ENV PORT=3001
+# Set environment variable agar Next.js berjalan di port 3002
+ENV PORT=3002
 
-# Expose port 3001
-EXPOSE 3001
+# Expose port 3002
+EXPOSE 3002
 
 # Jalankan aplikasi Next.js
 CMD ["npm", "start"]
