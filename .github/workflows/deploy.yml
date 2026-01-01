@@ -4,7 +4,7 @@ on:
   push:
     branches:
       - staging
-      - feat/config-deployment
+      - feat/config-deploy
 
 concurrency:
   group: build-deploy-${{ github.ref }}
